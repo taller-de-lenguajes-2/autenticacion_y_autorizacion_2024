@@ -1,0 +1,60 @@
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
+using MyApp.Repositories; // Asegúrate de importar el namespace de tu repositorio
+
+public class LoginController : Controller
+{
+    private readonly IUserRepository _userRepository;
+    private readonly ILogger<LoginController> _logger;
+
+    // Inyección de dependencias
+    public LoginController(IUserRepository userRepository, ILogger<LoginController> logger)
+    {
+        _userRepository = userRepository;
+        _logger = logger;
+    }
+
+    // Acción que devuelve la vista de login
+    public IActionResult Index()
+    {
+        return View();
+    }
+
+    // Acción para procesar el login
+    [HttpPost]
+    public IActionResult Login(string username, string password)
+    {
+        // Verificar que los datos de entrada no estén vacíos
+        if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
+        {
+            ViewBag.Error = "Por favor ingrese su nombre de usuario y contraseña.";
+            return View("Index");
+        }
+
+        // Obtener el usuario desde el repositorio
+        var user = _userRepository.GetUser(username, password);
+
+        // Si el usuario existe y las credenciales son correctas
+        if (user != null)
+        {
+            // Guardar la información del usuario en la sesión
+            HttpContext.Session.SetString("IsAuthenticated", "true");
+            HttpContext.Session.SetString("Username", user.Username);
+
+            // Redirigir a la página principal o dashboard
+            return RedirectToAction("Index", "Home");
+        }
+
+        // Si las credenciales no son correctas, mostrar mensaje de error
+        ViewBag.Error = "Credenciales inválidas.";
+        return View("Index");
+    }
+
+    // Acción para cerrar sesión
+    public IActionResult Logout()
+    {
+        // Limpiar la sesión
+        HttpContext.Session.Clear();
+        return RedirectToAction("Index");
+    }
+}
